@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>글쓰기 놀이터 v2</title>
+<style>
+:root{--bg:#fff9ec;--fg:#2b2a33;--card:#ffffff;--ac:#ff9a4d;--acfg:#2b2a33;--line:#f0d9b5;--soft:#fff0d6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1b22;--fg:#f3efe6;--card:#2a2731;--ac:#ffa25e;--acfg:#1d1b22;--line:#4a4452;--soft:#3a3342;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1d1b22;--fg:#f3efe6;--card:#2a2731;--ac:#ffa25e;--acfg:#1d1b22;--line:#4a4452;--soft:#3a3342;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:28px;margin:8px 0}h2{font-size:22px;margin:12px 0}
+.card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.btn{min-height:52px;padding:10px 16px;border:2px solid var(--line);border-radius:16px;background:var(--card);color:var(--fg);font:inherit;cursor:pointer;touch-action:manipulation}
+.btn:active{transform:scale(.97)}
+.p{background:var(--ac);color:var(--acfg);border-color:var(--ac);font-weight:700}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.big{font-size:26px}.em{font-size:44px}
+textarea,input,select{width:100%;font:inherit;padding:12px;border:2px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);margin:6px 0}
+textarea{min-height:120px;resize:vertical}
+label{display:block;font-weight:700;margin-top:8px}
+.dots{display:flex;gap:8px;margin:6px 0}.dots i{width:14px;height:14px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--ac)}
+.chip{display:inline-block;padding:2px 12px;margin:2px;border-radius:999px;background:var(--soft)}
+.msg{background:var(--soft);border-radius:14px;padding:12px;margin:12px 0}
+.say{font-size:30px;font-weight:700;text-align:center;padding:20px 8px;word-break:keep-all}
+.hint{opacity:.75;font-size:16px}
+pre{white-space:pre-wrap;font:inherit;margin:0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.tag{background:var(--soft);border-radius:999px;padding:2px 14px;font-size:16px}
+.bar{height:14px;border-radius:7px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--ac);width:0}
+:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.set summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:700}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.btn:active{transform:none}}
+@media print{.noprint,.dots,.row,.bar{display:none!important}body{background:#fff;color:#000}.card{border:1px solid #999}}
+</style>
+</head>
+<body>
+<div class="wrap"><div id="app"></div></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S={b:0,s:0,d:{},list:[],msg:''};
+const T={voice:1,hint:1,goal:200};
+const app=$('#app');
+const G=['','오늘의 목표: 그림을 골라 문장 한 개를 만들어 봐요.','오늘의 목표: 생각을 모아 처음-가운데-끝으로 글을 써요.','오늘의 목표: 내 생각을 글로 쓰고, 돌아보며 고쳐 써요.'];
+function render(){[home,low,mid,high][S.b]();const g=S.b&&S.s===0?`<div class="msg noprint">🎯 ${G[S.b]}</div>`:'';
+ app.insertAdjacentHTML('afterbegin',`<div class="top noprint"><h1>✏️ 글쓰기 놀이터</h1><span class="tag">${['학년을 골라요','1~2학년','3~4학년','5~6학년'][S.b]}</span></div>`+g)}
+function to(b,s){S.b=b;S.s=s;S.d={};render();scrollTo(0,0)}
+function nx(){S.s++;render();scrollTo(0,0)}
+function bk(){S.s--;render();scrollTo(0,0)}
+const dots=(n,t)=>'<div class="dots">'+Array.from({length:t},(_,i)=>`<i class="${i<=n?'on':''}"></i>`).join('')+'</div>';
+const back=()=>'<button class="btn" onclick="bk()">⬅️ 뒤로</button>';
+const homeBtn='<button class="btn" onclick="to(0,0)">🏠 처음으로</button>';
+function say(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='ko-KR';u.rate=.85;speechSynthesis.speak(u)}catch(e){}}
+function copy(t,btn){const ok=()=>{btn.textContent='✅ 복사했어요!'};
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,()=>fb(t,ok))}else fb(t,ok)}
+function fb(t,ok){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');ok()}catch(e){alert('글을 길게 눌러 직접 복사해 주세요')}a.remove()}
+window.CP=null;
+function cp(btn){copy(window.CP,btn)}
+
+/* 처음 화면 */
+function home(){
+ app.innerHTML=`<p>나는 몇 학년일까요? 눌러서 시작해요.</p>
+ <div class="grid">
+ <button class="btn big" onclick="to(1,0)"><span class="em" aria-hidden="true">🐣</span><br>1~2학년</button>
+ <button class="btn big" onclick="to(2,0)"><span class="em" aria-hidden="true">🌱</span><br>3~4학년</button>
+ <button class="btn big" onclick="to(3,0)"><span class="em" aria-hidden="true">🌳</span><br>5~6학년</button></div>
+ <details class="set card noprint"><summary>⚙️ 선생님 설정</summary>
+ <label><input type="checkbox" style="width:auto" ${T.voice?'checked':''} onchange="T.voice=this.checked?1:0"> 읽어 주기 버튼 보이기 (1~2학년)</label>
+ <label><input type="checkbox" style="width:auto" ${T.hint?'checked':''} onchange="T.hint=this.checked?1:0"> 질문 힌트 버튼 보이기 (5~6학년)</label>
+ <label>5~6학년 목표 글자 수 <select onchange="T.goal=+this.value">${[100,200,300].map(n=>`<option ${T.goal===n?'selected':''}>${n}</option>`).join('')}</select></label></details>
+ <p class="hint">내가 쓴 글은 이 화면 안에만 있어요. 새로고침하면 사라지니, 마음에 드는 글은 복사해 두세요.</p>`;
+}
+
+/* 1~2학년: 그림 고르고 문장 만들기 */
+const W=[['🧒','나는'],['👩','나는 엄마와'],['🐶','나는 강아지와'],['👫','나는 친구와']];
+const E=[['🏠','집에서'],['🏫','학교에서'],['🌳','공원에서'],['🏖️','바다에서']];
+const V=[['⚽','놀았어요'],['🍚','먹었어요'],['😄','웃었어요'],['📚','읽었어요']];
+const LOW=[['누구와 있었나요?','who',W],['어디에 있었나요?','where',E],['무엇을 했나요?','did',V]];
+function pickL(k,i){S.d[k]=i;nx()}
+function low(){
+ if(S.s<3){const [q,k,o]=LOW[S.s];
+  let top='';if(S.msg){top=`<div class="msg big">${S.msg}</div>`;S.msg=''}
+  let lst='';
+  if(S.s===0&&S.list.length){window.CP=S.list.join('\n');lst=`<div class="card"><h2>📒 내 글</h2><pre class="big">${esc(S.list.join('\n'))}</pre><div class="row"><button class="btn p" onclick="cp(this)">📋 복사하기</button><button class="btn" onclick="window.print()">🖨️ 인쇄하기</button><button class="btn" onclick="S.list=[];render()">🗑️ 내 글 지우기</button></div></div>`}
+  app.innerHTML=top+dots(S.s,3)+`<h2 class="big">${q}</h2><div class="grid">`+o.map((x,i)=>`<button class="btn big" onclick="pickL('${k}',${i})"><span class="em" aria-hidden="true">${x[0]}</span><br>${x[1]}</button>`).join('')+`</div><div class="row">${S.s>0?back():''}${homeBtn}</div>`+lst;
+ }else{
+  const t=W[S.d.who][1]+' '+E[S.d.where][1]+' '+V[S.d.did][1]+'.';
+  app.innerHTML=dots(3,4)+`<h2 class="big">내가 만든 문장이에요! 🎉</h2><div class="card say">${esc(t)}</div>
+  ${T.voice?`<div class="row"><button class="btn big" onclick="say('${t}')">🔊 읽어 주기</button></div>`:''}
+  <label>✏️ 더 쓰고 싶은 말이 있나요? (안 써도 괜찮아요)</label>
+  <input class="big" oninput="S.d.more=this.value" value="${esc(S.d.more||'')}" placeholder="예) 정말 재미있었어요.">
+  <div class="row"><button class="btn p big" onclick="addL('${t}')">➕ 내 글에 담기</button>${back()}</div>`;
+ }
+}
+function addL(t){S.list.push(t+(S.d.more?' '+S.d.more.trim():''));S.msg='멋져요! 문장이 하나 늘었어요 🎉';to(1,0)}
+
+/* 3~4학년: 단계형 글쓰기 */
+const TOP=[['📅','오늘 있었던 일'],['💛','내가 좋아하는 것'],['🌈','상상 이야기']];
+const Q=[['누가','예) 나, 동생, 친구'],['언제','예) 어제, 주말, 점심시간'],['어디서','예) 놀이터, 우리 집'],['무엇을 했나요?','예) 자전거를 탔어요'],['그때 기분은 어땠나요?','예) 신났어요, 조금 떨렸어요']];
+const P=[['처음','어떤 일이었는지 소개해요.'],['가운데','있었던 일을 자세히 써요. 보고 들은 것도 넣어 보세요.'],['끝','느낌이나 다짐으로 마무리해요.']];
+function pickM(i){S.d.t=i;nx()}
+function mid(){
+ const s=S.s;
+ if(s===0){app.innerHTML=dots(0,4)+`<h2>1단계 · 무엇에 대해 쓸까요?</h2><div class="grid">`+TOP.map((x,i)=>`<button class="btn big" onclick="pickM(${i})"><span class="em" aria-hidden="true">${x[0]}</span><br>${x[1]}</button>`).join('')+`</div><div class="row">${homeBtn}</div>`}
+ else if(s===1){app.innerHTML=dots(1,4)+`<h2>2단계 · 생각 모으기</h2><p class="hint">짧게 써도 괜찮아요. 떠오르는 낱말을 적어 봐요.</p>`+Q.map((q,i)=>`<label>${q[0]}</label><input oninput="S.d.q${i}=this.value" value="${esc(S.d['q'+i]||'')}" placeholder="${q[1]}">`).join('')+`<div class="row">${back()}<button class="btn p" onclick="nx()">다음 ➡️</button></div>`}
+ else if(s===2){
+  const chips=Q.map((q,i)=>S.d['q'+i]?`<span class="chip">${esc(S.d['q'+i])}</span>`:'').join('');
+  app.innerHTML=dots(2,4)+`<h2>3단계 · 글로 써 보기</h2><div class="card">내가 모은 낱말: ${chips||'<span class="hint">(없어도 괜찮아요)</span>'}</div>`+P.map((p,i)=>`<label>${i+1}. ${p[0]}</label><textarea oninput="S.d.p${i}=this.value" placeholder="${p[1]}">${esc(S.d['p'+i]||'')}</textarea>`).join('')+`<div class="row">${back()}<button class="btn p" onclick="nx()">다 썼어요 ✅</button></div>`}
+ else{
+  const t=[S.d.p0,S.d.p1,S.d.p2].filter(x=>x&&x.trim()).join('\n');window.CP=t;
+  const n=t.replace(/\s/g,'').length;
+  const m=n===0?'아직 비어 있어요. 뒤로 가서 한 문장만 써 볼까요?':n<20?'좋아요! 한 문장만 더 써 보면 더 생생해질 거예요.':n<80?'생각이 잘 담겼어요! 기분을 나타내는 말을 하나 더 넣어 볼까요?':'와, 정성이 가득한 글이에요! 읽는 친구에게 장면이 그려질 것 같아요.';
+  app.innerHTML=dots(3,4)+`<h2>🎉 내가 쓴 글 · ${TOP[S.d.t][1]}</h2><div class="card"><pre>${esc(t)||'(비어 있어요)'}</pre></div><div class="msg">💬 ${m}<div class="hint">쓴 글자 수: ${n}자</div></div><div class="row">${back()}<button class="btn p" onclick="cp(this)">📋 복사하기</button><button class="btn" onclick="window.print()">🖨️ 인쇄하기</button><button class="btn" onclick="to(S.b,0)">🔄 다시 시작하기</button>${homeBtn}</div>`}
+}
+
+/* 5~6학년: 자율 글쓰기 + 자기 평가 */
+const HINT=['읽는 사람이 궁금해할 점은 무엇일까요?','더 자세히 쓸 수 있는 장면은 어디일까요?','느낌을 나타내는 말을 넣어 볼까요?','첫 문장을 바꾼다면 어떻게 쓸까요?','가장 하고 싶은 말은 한 문장으로 무엇일까요?'];
+const SUG=['잊지 못할 하루','내가 바꾸고 싶은 우리 학교','나의 꿈','가장 고마운 사람'];
+const EV=['내 생각을 분명하게 썼나요?','읽는 사람을 생각하며 썼나요?','고쳐 쓸 곳을 찾아 보았나요?'];
+function rate(i,n){S.d['r'+i]=n;render()}
+function hint(){S.d.h=((S.d.h==null?-1:S.d.h)+1)%HINT.length;$('#hint').textContent='💡 '+HINT[S.d.h]}
+function cnt(){const t=S.d.txt||'',n=t.replace(/\s/g,'').length;$('#cnt').textContent=n+'자 / 목표 '+T.goal+'자 · '+(t.split(/[.!?。]\s*/).filter(x=>x.trim()).length)+'문장'+(n>=T.goal?' 🎉 목표를 넘었어요!':'');$('#pb').style.width=Math.min(100,n/T.goal*100)+'%'}
+function high(){
+ const s=S.s;
+ if(s===0){app.innerHTML=dots(0,4)+`<h2>1. 주제와 생각 정하기</h2><label>쓰고 싶은 주제</label><input id="top" oninput="S.d.top=this.value" value="${esc(S.d.top||'')}" placeholder="직접 정해도 좋고, 아래에서 골라도 돼요">`+SUG.map(x=>`<button class="chip btn" style="min-height:40px" onclick="S.d.top='${x}';$('#top').value='${x}'">${x}</button>`).join('')+`<label>떠오르는 낱말이나 생각 (자유롭게)</label><textarea oninput="S.d.kw=this.value" placeholder="예) 친구, 운동장, 처음 느낀 감정…">${esc(S.d.kw||'')}</textarea><div class="row">${homeBtn}<button class="btn p" onclick="nx()">글쓰기 시작 ➡️</button></div>`}
+ else if(s===1){app.innerHTML=dots(1,4)+`<h2>2. 글쓰기 · ${esc(S.d.top||'나의 글')}</h2>${S.d.kw?`<div class="card hint">내 생각 메모: ${esc(S.d.kw)}</div>`:''}<textarea style="min-height:260px" oninput="S.d.txt=this.value;cnt()" placeholder="생각이 흘러가는 대로 먼저 써 보세요. 고치는 건 나중에 해도 돼요.">${esc(S.d.txt||'')}</textarea><div class="hint" id="cnt"></div><div class="bar"><i id="pb"></i></div>${T.hint?'<div class="msg" id="hint">💡 막히면 💡 버튼을 눌러 보세요.</div>':''}<div class="row">${back()}${T.hint?'<button class="btn" onclick="hint()">💡 질문 힌트</button>':''}<button class="btn p" onclick="nx()">다 썼어요 ➡️</button></div>`;cnt()}
+ else if(s===2){app.innerHTML=dots(2,4)+`<h2>3. 내 글 돌아보기</h2><p class="hint">점수가 아니에요. 내 글을 살펴보는 시간이에요.</p>`+EV.map((q,i)=>`<label>${q}</label><div class="row" style="margin:4px 0">`+[1,2,3].map(n=>`<button class="btn ${(S.d['r'+i]||0)>=n?'p':''}" onclick="rate(${i},${n})">${'★'.repeat(n)}</button>`).join('')+`</div>`).join('')+`<label>다음에 더 해 보고 싶은 것은?</label><textarea oninput="S.d.ref=this.value" style="min-height:80px">${esc(S.d.ref||'')}</textarea><div class="row">${back()}<button class="btn p" onclick="nx()">완성하기 🎉</button></div>`}
+ else{
+  const ev=EV.map((q,i)=>`${q} ${'★'.repeat(S.d['r'+i]||0)||'-'}`).join('\n');
+  const t=`[${S.d.top||'나의 글'}]\n${S.d.txt||''}\n\n- 돌아보기 -\n${ev}\n${S.d.ref?'다음에 해 보고 싶은 것: '+S.d.ref:''}`;window.CP=t;
+  app.innerHTML=dots(3,4)+`<h2>🎉 완성! 끝까지 써 낸 것이 대단해요</h2><div class="card"><pre>${esc(t)}</pre></div><div class="row">${back()}<button class="btn p" onclick="cp(this)">📋 복사하기</button><button class="btn" onclick="window.print()">🖨️ 인쇄하기</button><button class="btn" onclick="to(S.b,0)">🔄 다시 시작하기</button>${homeBtn}</div><p class="hint">복사한 글은 메모장이나 학급 게시판에 붙여 넣어 보관해요.</p>`}
+}
+render();
+</script>
+</body>
+</html>
